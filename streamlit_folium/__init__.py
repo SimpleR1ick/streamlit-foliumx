@@ -209,7 +209,8 @@ def st_folium(
     return_on_hover: bool = False,
     use_container_width: bool = False,
     layer_control: folium.LayerControl | None = None,
-    pixelated: bool = False,
+    legends: list[float, str] | None = None,
+    legend: str = '',
     debug: bool = False,
 ):
     """Display a Folium object in Streamlit, returning data as user interacts
@@ -252,9 +253,6 @@ def st_folium(
     layer_control: folium.LayerControl or None
         If you want to have layer control for dynamically added layers, you can
         pass the layer control here.
-    pixelated: bool
-        If True, add CSS rules to render image crisp pixels which gives a pixelated
-        result instead of a blurred image.
     debug: bool
         If True, print out the html and javascript code used to render the map with
         st.code
@@ -274,8 +272,6 @@ def st_folium(
         width = None
 
     folium_map: folium.Map = fig  # type: ignore
-
-    folium_map.render()
 
     # handle the case where you pass in a figure rather than a map
     # this assumes that a map is the first child
@@ -321,6 +317,7 @@ def st_folium(
         else {},
         "last_circle_radius": None,
         "last_circle_polygon": None,
+        "last_legend_clicked": None,
     }
 
     # If the user passes a custom list of returned objects, we'll only return those
@@ -351,10 +348,8 @@ def st_folium(
 
     if debug:
         with st.expander("Show generated code"):
-            if html:
-                st.info("HTML:")
-                st.code(html)
-
+            st.info("HTML:")
+            st.code(html)
             st.info("Main Map Leaflet js:")
             st.code(leaflet)
 
@@ -365,23 +360,6 @@ def st_folium(
             if layer_control_string is not None:
                 st.info("Layer control js:")
                 st.code(layer_control_string)
-
-    def walk(fig):
-        if isinstance(fig, folium.plugins.DualMap):
-            yield from walk(fig.m1)
-            yield from walk(fig.m2)
-        if isinstance(fig, folium.elements.JSCSSMixin):
-            yield fig
-        if hasattr(fig, "_children"):
-            for child in fig._children.values():
-                yield from walk(child)
-
-    css_links = []
-    js_links = []
-
-    for elem in walk(folium_map):
-        css_links.extend([href for _, href in elem.default_css])
-        js_links.extend([src for _, src in elem.default_js])
 
     component_value = _component_func(
         script=leaflet,
@@ -397,9 +375,8 @@ def st_folium(
         feature_group=feature_group_string,
         return_on_hover=return_on_hover,
         layer_control=layer_control_string,
-        pixelated=pixelated,
-        css_links=css_links,
-        js_links=js_links,
+        legends=legends,
+        legend=legend,
     )
 
     return component_value
@@ -415,22 +392,10 @@ def _generate_leaflet_string(
         mappings = {}
 
     mappings[m._id] = base_id
-    try:
-        element_id = m.element_name.replace("map_", "").replace("tile_layer_", "")
-        parent_id = m.element_parent_name.replace("map_", "").replace("tile_layer_", "")
-        if element_id not in mappings:
-            mappings[element_id] = m._parent._id
-        if parent_id not in mappings:
-            mappings[parent_id] = m._parent._parent._id
-    except AttributeError:
-        pass
 
     m._id = base_id
 
     if isinstance(m, folium.plugins.DualMap):
-        m.render()
-        m.m1.render()
-        m.m2.render()
         if not nested:
             return _generate_leaflet_string(
                 m.m1, nested=False, mappings=mappings, base_id=base_id
