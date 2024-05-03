@@ -1,14 +1,14 @@
 import setuptools
 
 setuptools.setup(
-    name="streamlit_foliumx",
-    version="0.20.0",
-    author="Randy Zwitch",
+    name="streamlit_folium_incaper",
+    version="0.21.0",
+    author="Henrique Dalmagro",
     author_email="rzwitch@gmail.com",
     description="Render Folium objects in Streamlit",
     long_description="",
     long_description_content_type="text/plain",
-    url="https://github.com/Xdeivison/streamlit-foliumx",
+    url="https://github.com/simpler1ick/streamlit-foliumx",
     packages=setuptools.find_packages(),
     include_package_data=True,
     classifiers=[],
